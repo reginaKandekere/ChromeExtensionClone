@@ -1,35 +1,26 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js"
-import { getDatabase } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js"
+import { getDatabase,
+         ref,
+         push,
+         onValue,
+         remove } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js"
 
 const firebaseConfig = {
-    databaseUrl: "https://leads-app-tracker-d8ef0-default-rtdb.firebaseio.com"
+    databaseURL: process.env.DATABASE_URL
 }
-const app = initializeApp(firebaseConfig);
-const database = getDatabase
+const app = initializeApp(firebaseConfig)
+const database = getDatabase(app)
+const referenceInDB = ref(database, "leads")
 
-let myLeads = []
 const inputEl = document.getElementById("input-el")
 const inputBtn = document.getElementById("input-btn")
 const ulEl = document.getElementById("ul-el")
 const deleteBtn = document.getElementById("delete-btn")
 
-
-deleteBtn.addEventListener("dblClick", function() {
-    myLeads = []
-    renderLeads(myLeads)
-
-})
-
-inputBtn.addEventListener("click", function() {
-    myLeads.push(inputEl.value)
-    inputEl.value = ""
-    renderLeads(myLeads)
-})
-
-function renderLeads(leads){
+function render(leads) {
     let listItems = ""
-for (let i = 0; i < leads.length; i++) {
-    listItems += `
+    for (let i = 0; i < leads.length; i++) {
+        listItems += `
             <li>
                 <a target='_blank' href='${leads[i]}'>
                     ${leads[i]}
@@ -37,6 +28,24 @@ for (let i = 0; i < leads.length; i++) {
             </li>
         `
     }
-    ulEl.innerHTML = listItems  
+    ulEl.innerHTML = listItems
 }
 
+onValue(referenceInDB, function(snapshot) {
+    const snapshotDoesExist = snapshot.exists()
+    if (snapshotDoesExist) {
+        const snapshotValues = snapshot.val()
+        const leads = Object.values(snapshotValues)
+        render(leads)
+    }
+})
+
+deleteBtn.addEventListener("dblclick", function() {
+    remove(referenceInDB)
+    ulEl.innerHTML = ""
+})
+
+inputBtn.addEventListener("click", function() {
+    push(referenceInDB, inputEl.value)
+    inputEl.value = "" 
+})
